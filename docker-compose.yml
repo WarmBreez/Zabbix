@@ -1,0 +1,69 @@
+version: "3.5"
+ 
+services:
+ 
+  zabbix-postgre:
+    image: postgres:16
+    container_name: zabbix-postgre
+    hostname: zabbix-postgre
+    restart: unless-stopped
+    env_file:
+      - dbpostgre.env
+    ports:
+      - 5432:5432
+    networks:
+      - zabbix
+    volumes:
+      - ./postgrdb-data:/var/lib/postgresql/data/ 
+
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:alpine-6.4-latest
+    container_name: zabbix-server
+    hostname: zabbix-server
+    restart: unless-stopped
+    env_file:
+      - server.env
+    ports:
+      - 10051:10051
+    networks:
+      - zabbix
+    depends_on:
+      - zabbix-postgre
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-6.4-latest
+    container_name: zabbix-web
+    hostname: zabbix-web
+    restart: unless-stopped
+    env_file: 
+      - web.env
+    ports:
+      - 80:8080
+      - 8443:8443
+    networks:
+      - zabbix
+    depends_on:
+      - zabbix-postgre
+      - zabbix-server
+ 
+  zabbix-agent:
+    image: zabbix/zabbix-agent:alpine-6.4-latest
+    container_name: zabbix-agent
+    restart: unless-stopped
+    env_file:
+      - agent.env
+    volumes:
+      - ./zabbix_agentd.d:/etc/zabbix/zabbix_agentd.d:ro
+    networks:
+      - zabbix
+
+volumes:
+  postgrdb-data:
+
+
+networks:
+  zabbix:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
