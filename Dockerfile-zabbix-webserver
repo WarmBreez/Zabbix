@@ -1,0 +1,16 @@
+FROM zabbix/zabbix-web-nginx-pgsql:ubuntu-7.2-latest
+
+USER root
+
+# Установим текстовые редакторы
+RUN apt update && apt install nano
+
+# Создадим директорию для SSL и скопируем сертификаты
+RUN mkdir -p /etc/ssl/zabbix/zabbix-ssl
+
+COPY zabbix-ssl/zabbix.crt /etc/ssl/zabbix/zabbix-ssl/zabbix.crt
+
+COPY zabbix-ssl/zabbix.key /etc/ssl/zabbix/zabbix-ssl/zabbix.key
+
+# Копируем кастомный nginx конфиг
+COPY nginx/ssl.conf /etc/nginx/conf.d/ssl.conf

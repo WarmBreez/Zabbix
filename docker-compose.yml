@@ -1,0 +1,105 @@
+services:
+
+    zabbix-postgre:
+      image: postgres:16
+      container_name: zabbix-postgre
+      hostname: zabbix-postgre
+      restart: unless-stopped
+      environment:
+        TZ: Europe/Moscow
+        POSTGRES_DB: zabbixdb
+        POSTGRES_USER: zabbix
+        POSTGRES_PASSWORD: zabbix
+      ports:
+        - 5432:5432
+      networks:
+        zabbix_net:
+      volumes:
+        - ./postgredb-data:/var/lib/postgresql/data/
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U zabbix -d zabbixdb -h zabbix-postgre"]
+        interval: 10s
+        timeout: 3s
+        retries: 3
+
+    zabbix-server:
+      build:
+        context: .
+        dockerfile: Dockerfile-zabbix-server
+      image: zabbix/zabbix-server-pgsql:ubuntu-7.2-latest
+      container_name: zabbix-server
+      hostname: zabbix-server
+      restart: unless-stopped
+      environment:
+        DB_SERVER_HOST: zabbix-postgre
+        POSTGRES_DB: zabbixdb1
+        POSTGRES_USER: zabbix
+        POSTGRES_PASSWORD: zabbix
+        ZBX_HOUSEKEEPINGFREQUENCY: 1
+        ZBX_MAXHOUSEKEEPERDELETE: 500
+        ZBX_PROBLEMHOUSEKEEPINGFREQUENCY: 60
+        ZBX_CACHESIZE: 256M
+        ZBX_ENABLE_SNMP_TRAPS: true
+        ZBX_STARTTRAPPERS: 5
+        ZBX_STARTIPMIPOLLERS: 5
+        ZBX_IPMIPOLLERS: 3
+        ZBX_STARTPOLLERS: 100
+        ZBX_STARTPOLLERSUNREACHABLE: 2
+      ports:
+         - 10051:10051
+      networks:
+         zabbix_net:
+      volumes:
+         - ./externalscripts:/usr/lib/zabbix/externalscripts
+      depends_on:
+         zabbix-postgre:
+            condition: service_healthy
+
+    zabbix-web:
+      build:
+        context: .
+        dockerfile: Dockerfile-zabbix-webserver
+      image: zabbix/zabbix-web-nginx-pgsql:ubuntu-7.2-latest
+      container_name: zabbix-web
+      hostname: zabbix-web
+      restart: unless-stopped
+      environment:
+        DB_SERVER_HOST: zabbix-postgre
+        POSTGRES_USER: zabbix
+        POSTGRES_PASSWORD: zabbix
+        POSTGRES_DB: zabbixdb1
+        ZBX_SERVER_HOST: zabbix-server
+        ZBX_SERVER_NAME: Zabbix.Test
+      volumes:
+        - ./zabbix-ssl:/etc/ssl/zabbix/zabbix-ssl
+      ports:
+        - 8080:8080
+        - 8443:8443
+      networks:
+        zabbix_net:
+      depends_on:
+          zabbix-postgre:
+             condition: service_healthy
+
+
+    zabbix-agent-2:
+      image: zabbix/zabbix-agent2:ubuntu-7.2-latest
+      container_name: zabbix-agent2
+      restart: unless-stopped
+      environment:
+        ZBX_HOSTNAME: zabbix-agent2
+        ZBX_METADATAITEM: systemc.uname
+        ZBX_DENYKEY: system.run[*]
+        ZBX_ACTIVE_ALLOW: true
+        ZBX_PASSIVE_ALLOW: true
+      networks:
+       zabbix_net:
+
+volumes:
+    postgredb-data:
+    zabbix-ssl:
+    externalscripts:
+
+networks:
+    zabbix_net:
+      driver: bridge
