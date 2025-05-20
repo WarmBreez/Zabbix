@@ -1,7 +1,10 @@
 # Zabbix
 1.Изменение подклчюения с https на ssh:
+
 git remote set-url origin git@github.com:username/repository.git
+
 Проверяем:
+
 git remote -v
 
 2. Создать самоподписаные сертификаты (zabbix-ssl)
