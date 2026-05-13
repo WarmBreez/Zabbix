@@ -1,0 +1,13 @@
+
+FROM zabbix/zabbix-agent2:ubuntu-7.4-latest
+
+USER root
+
+RUN mkdir /etc/zabbix/scripts
+
+RUN apt update && apt install -y openssl
+
+COPY scripts/check_domain_expiry.sh /etc/zabbix/scripts/check_domain_expiry.sh
+
+COPY config/userparam.conf /etc/zabbix/zabbix_agent2.d/userparam.conf
+ 

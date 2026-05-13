@@ -7,13 +7,13 @@ services:
       restart: unless-stopped
       environment:
         TZ: Europe/Moscow
-        POSTGRES_DB: zabbixdb
-        POSTGRES_USER: zabbix
-        POSTGRES_PASSWORD: zabbix
+        POSTGRES_DB: ${POSTGRES_DB}
+        POSTGRES_USER: ${POSTGRES_USER}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       ports:
         - 5432:5432
       networks:
-        zabbix_net:
+        - zabbix_net
       volumes:
         - ./postgredb-data:/var/lib/postgresql/data/
       healthcheck:
@@ -26,15 +26,15 @@ services:
       build:
         context: .
         dockerfile: Dockerfile-zabbix-server
-      image: zabbix/zabbix-server-pgsql:ubuntu-7.2-latest
+      image: zabbix/zabbix-server-pgsql:test1
       container_name: zabbix-server
       hostname: zabbix-server
       restart: unless-stopped
       environment:
         DB_SERVER_HOST: zabbix-postgre
-        POSTGRES_DB: zabbixdb1
-        POSTGRES_USER: zabbix
-        POSTGRES_PASSWORD: zabbix
+        POSTGRES_DB: ${POSTGRES_DB}
+        POSTGRES_USER: ${POSTGRES_USER}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
         ZBX_HOUSEKEEPINGFREQUENCY: 1
         ZBX_MAXHOUSEKEEPERDELETE: 500
         ZBX_PROBLEMHOUSEKEEPINGFREQUENCY: 60
@@ -48,9 +48,7 @@ services:
       ports:
          - 10051:10051
       networks:
-         zabbix_net:
-      volumes:
-         - ./externalscripts:/usr/lib/zabbix/externalscripts
+         - zabbix_net
       depends_on:
          zabbix-postgre:
             condition: service_healthy
@@ -59,31 +57,35 @@ services:
       build:
         context: .
         dockerfile: Dockerfile-zabbix-webserver
-      image: zabbix/zabbix-web-nginx-pgsql:ubuntu-7.2-latest
+      image: zabbix-web:test1
       container_name: zabbix-web
       hostname: zabbix-web
       restart: unless-stopped
       environment:
         DB_SERVER_HOST: zabbix-postgre
-        POSTGRES_USER: zabbix
-        POSTGRES_PASSWORD: zabbix
-        POSTGRES_DB: zabbixdb1
+        POSTGRES_USER: ${POSTGRES_USER}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        POSTGRES_DB: ${POSTGRES_DB}
         ZBX_SERVER_HOST: zabbix-server
-        ZBX_SERVER_NAME: Zabbix.Test
+        ZBX_SERVER_NAME: ${ZBX_SERVER_NAME}
       volumes:
-        - ./zabbix-ssl:/etc/ssl/zabbix/zabbix-ssl
+         - ./zabbix-ssl/zabbix.crt:/etc/ssl/nginx/zabbix.crt:ro
+         - ./zabbix-ssl/zabbix.key:/etc/ssl/nginx/zabbix.key:ro
+         - ./zabbix-ssl/dhparam.pem:/etc/ssl/nginx/dhparam.pem:ro
       ports:
-        - 8080:8080
-        - 8443:8443
+         - 443:8443
       networks:
-        zabbix_net:
+         - zabbix_net
       depends_on:
           zabbix-postgre:
              condition: service_healthy
 
 
     zabbix-agent-2:
-      image: zabbix/zabbix-agent2:ubuntu-7.2-latest
+      build:
+        context: .
+        dockerfile: Dockerfile-zabbix-agent2
+      image: zabbix-agent2:test1
       container_name: zabbix-agent2
       restart: unless-stopped
       environment:
@@ -92,13 +94,17 @@ services:
         ZBX_DENYKEY: system.run[*]
         ZBX_ACTIVE_ALLOW: true
         ZBX_PASSIVE_ALLOW: true
+        ZBX_UNSAFEUSERPARAMETERS: 1
+        ZBX_USERPARAMETER: 'domain.expiry[*],/etc/zabbix/scripts/check_domain_expiry.sh $1'
+      volumes:
+          - ./scripts:/etc/zabbix/scripts:ro
       networks:
-       zabbix_net:
+          - zabbix_net
+
 
 volumes:
     postgredb-data:
     zabbix-ssl:
-    externalscripts:
 
 networks:
     zabbix_net:
