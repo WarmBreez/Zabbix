@@ -13,7 +13,8 @@ services:
       ports:
         - 5432:5432
       networks:
-        - zabbix_net
+        zabbix_net:
+          ipv4_address: 172.16.0.5
       volumes:
         - ./postgredb-data:/var/lib/postgresql/data/
       healthcheck:
@@ -48,7 +49,8 @@ services:
       ports:
          - 10051:10051
       networks:
-         - zabbix_net
+         zabbix_net:
+           ipv4_address: 172.16.0.4
       depends_on:
          zabbix-postgre:
             condition: service_healthy
@@ -75,31 +77,32 @@ services:
       ports:
          - 443:8443
       networks:
-         - zabbix_net
+         zabbix_net:
+           ipv4_address: 172.16.0.3
       depends_on:
           zabbix-postgre:
              condition: service_healthy
 
 
-    zabbix-agent-2:
-      build:
-        context: .
-        dockerfile: Dockerfile-zabbix-agent2
-      image: zabbix-agent2:test1
-      container_name: zabbix-agent2
-      restart: unless-stopped
-      environment:
-        ZBX_HOSTNAME: zabbix-agent2
-        ZBX_METADATAITEM: systemc.uname
-        ZBX_DENYKEY: system.run[*]
-        ZBX_ACTIVE_ALLOW: true
-        ZBX_PASSIVE_ALLOW: true
-        ZBX_UNSAFEUSERPARAMETERS: 1
-        ZBX_USERPARAMETER: 'domain.expiry[*],/etc/zabbix/scripts/check_domain_expiry.sh $1'
-      volumes:
-          - ./scripts:/etc/zabbix/scripts:ro
-      networks:
-          - zabbix_net
+#    zabbix-agent-2:
+#      build:
+#        context: .
+#        dockerfile: Dockerfile-zabbix-agent2
+#      image: zabbix-agent2:test1
+#      container_name: zabbix-agent2
+#      restart: unless-stopped
+#      environment:
+#        ZBX_HOSTNAME: zabbix-agent2
+#        ZBX_METADATAITEM: systemc.uname
+#        ZBX_DENYKEY: system.run[*]
+#        ZBX_ACTIVE_ALLOW: true
+#        ZBX_PASSIVE_ALLOW: true
+#        ZBX_UNSAFEUSERPARAMETERS: 1
+#        ZBX_USERPARAMETER: 'domain.expiry[*],/etc/zabbix/scripts/check_domain_expiry.sh $1'
+#      volumes:
+#          - ./scripts:/etc/zabbix/scripts:ro
+#      networks:
+#          - zabbix_net
 
 
 volumes:
@@ -109,3 +112,7 @@ volumes:
 networks:
     zabbix_net:
       driver: bridge
+      ipam:
+         config:
+           - subnet: 172.16.0.0/16
+             gateway: 172.16.0.1
