@@ -1,12 +1,7 @@
 # Zabbix
 1. Создать самоподписаные сертификаты (zabbix-ssl)
 
-mkdir -p certs
-openssl req -x509 -nodes -days 365 \
-  -newkey rsa:2048 \
-  -keyout certs/zabbix.key \
-  -out certs/zabbix.crt \
-  -subj "/C=RU/ST=Moscow/L=Moscow/O=MyCompany/CN=zabbix-web"
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048   -keyout zabbix.key   -out zabbix.crt   -subj "/C=RU/ST=Moscow/L=Moscow/O=Zabbix/CN=zabbix.local"
 
 2. Заменить данные на свои (логины и пароли).
 
